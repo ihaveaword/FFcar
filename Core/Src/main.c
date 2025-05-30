@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "memorymap.h"
+#include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -42,8 +43,10 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+
 /* USER CODE BEGIN PV */
 static uint32_t blinkInterval = 1000; // Blink interval in milliseconds
+static uint8_t dataRcvd;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -55,6 +58,27 @@ static void MPU_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+  if (huart->Instance == USART1) // Check if the interrupt is from USART1
+  {
+    if (dataRcvd == '1') // If received data is '1'
+    {
+      blinkInterval = 1000; // Set blink interval to 500 ms
+    }
+    else if (dataRcvd == '2') // If received data is '2'
+    {
+      blinkInterval = 300; // Set blink interval to 1000 ms
+    }
+    else if (dataRcvd == '3') // If received data is '3'
+    {
+      blinkInterval = 50; // Set blink interval to 2000 ms
+    }
+    
+    HAL_UART_Receive_IT(&huart1, &dataRcvd, 1); // Restart UART reception in interrupt mode
+  }
+}
 
 /* USER CODE END 0 */
 
@@ -90,12 +114,14 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  HAL_UART_Receive_IT(&huart1, &dataRcvd, 1); // Start UART reception in interrupt mode
   while (1)
   {
     HAL_GPIO_WritePin(GPIOC,GPIO_PIN_1,GPIO_PIN_RESET); // Turn on LED
@@ -151,7 +177,7 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB3CLKDivider = RCC_APB3_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV1;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV1;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV2;
   RCC_ClkInitStruct.APB4CLKDivider = RCC_APB4_DIV1;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
